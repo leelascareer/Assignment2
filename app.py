@@ -1,47 +1,106 @@
+from langchain_core.messages import HumanMessage
+from graph import build_graph
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-
+import state
 
 load_dotenv()
 
-# Initialize the OpenAI client
-llm=ChatOpenAI(model="gpt-4.1-nano", seed=6)
+def main() -> None:
+	graph = build_graph()
 
-#String input to the model
+#vip customer, neutral sentiment
+	print("=== VIP Customer with Neutral Sentiment ===")
+	vip_result = graph.invoke({
+		"messages": [HumanMessage(content="I'm a VIP customer, please check my order.")],
+		"should_escalate": False,
+		"issue_type": "",
+		"user_tier": "",
+		"order_status": "",
+		"tracking_id": 1001,
+		"sentiment": "",
+		"discount_code": "",
+		"message_to_user": "",
+		"survey_request": ""
+	})
 
-resp1 = llm.invoke("We are building an AI system for processing medical insurance claims.")
-resp2 = llm.invoke("What are the main risks in this system?")
-print("Response from OpenAI:")
-print("--------Response to String Input--------")
-print("Response1:", resp1.content)
-print("Response2:", resp2.content)
+	print("VIP result:", 
+	   "User tier: " + vip_result.get("user_tier")+"\n",
+	   "Escalte: "+ str(vip_result.get("should_escalate"))+"\n",
+	   "Issue Type: "+vip_result.get("issue_type")+"\n",
+	   "Order is " + vip_result.get("order_status") + "\n",
+	   "Tracking ID: " + str(vip_result.get("tracking_id"))+ "\n",
+	   vip_result.get("message_to_user"), vip_result.get("discount_code"))
+	
+	current_tracking_id = vip_result.get("tracking_id")
+
+# Standard customer with neutral sentiment
+	print("\n=== Standard Customer with Neutral Sentiment ===")
+	standard_result = graph.invoke({
+		"messages": [HumanMessage(content="Check my order status")],
+		"should_escalate": False,
+		"issue_type": "",
+		"user_tier": "",
+		"tracking_id": current_tracking_id,
+		"order_status": "",
+		"sentiment": "neutral",
+		"discount_code": "",
+		"message_to_user": ""
+	})
+	print("Standard result:", 
+	   "User tier: " + standard_result.get("user_tier")+"\n",
+	   "Escalte: "+ str(standard_result.get("should_escalate"))+"\n",
+	   "Issue Type: "+standard_result.get("issue_type")+"\n",
+	   " Order is " + standard_result.get("order_status") + "\n",
+	   " with tracking ID: " + str(standard_result.get("tracking_id"))+ "\n",
+	   standard_result.get("message_to_user"), standard_result.get("discount_code")) 
+	
+	current_tracking_id = standard_result.get("tracking_id")
+	
+	## standard angry customer
+	print("\n=== Standard Customer with Negative Sentiment ===")
+	standard_result = graph.invoke({
+		"messages": [HumanMessage(content="I am extremely unhappy with the delay in my order!")],
+		"should_escalate": False,
+		"issue_type": "",
+		"user_tier": "",
+		"tracking_id": current_tracking_id,
+		"order_status": "",
+		"sentiment": "",
+		"discount_code": "",
+		"message_to_user": ""
+	})
+	print("Standard result:", 
+	   "User tier: " + standard_result.get("user_tier")+"\n",
+	   "Escalte: "+ str(standard_result.get("should_escalate"))+"\n",
+	   "Issue Type: "+standard_result.get("issue_type")+"\n",
+	   " Order is " + standard_result.get("order_status") + "\n",
+	   " with tracking ID: " + str(standard_result.get("tracking_id"))
+	   + "\n",
+	   	standard_result.get("message_to_user"), standard_result.get("discount_code"))
+	
+	current_tracking_id = standard_result.get("tracking_id")
+	
+#Happy VIP customer	
+	print("\n=== VIP Customer with Positive Sentiment ===")
+	vip_result = graph.invoke({
+		"messages": [HumanMessage(content="I am happy with your service last time! I am very happy with the service. Can you check my order?")],
+		"should_escalate": False,
+		"issue_type": "",
+		"user_tier": "",
+		"order_status": "",
+		"tracking_id": current_tracking_id,
+		"sentiment": "",
+		"discount_code": "",
+		"message_to_user": ""
+	})
+	print("VIP result:", 
+	   "User tier: " + vip_result.get("user_tier")+"\n",
+	   "Escalte: "+ str(vip_result.get("should_escalate"))+"\n",
+	   "Issue Type: "+vip_result.get("issue_type")+"\n",
+	   "Order is " + vip_result.get("order_status") + "\n",
+	   "Tracking ID: " + str(vip_result.get("tracking_id"))+ "\n",
+	   vip_result.get("message_to_user"), vip_result.get("discount_code"))
 
 
-# Message input to the model
-messages = [
-    SystemMessage(content="You are a senior AI architect reviewing production systems.."),
-    HumanMessage(content="We are building an AI system for processing medical insurance claims.") ,
-    HumanMessage(content="What are the main risks in this system?")
-]
-response = llm.invoke(messages)
-print("--------Response to MESSAGE Input--------")
-print("Response1:",response.content)
-
-"""
-Reflection:
-
-1. Why did string-based invocation fail?
-The string-based invocation failed because the model does not retain the context of previous interactions. 
-So the model does not know what to refer to when it recieves the second input . 
-It does not know what "this system" is.
-
-2. Why does message-based invocation work?
-LangChain Messages retain state and converstaion history. This allows the model to understand the context of the current user query. It now knows that "this system" referes to the medical insurance claims processing system mentioned in the first message.
-Also there it supports clear role based distinction of what is the system message, user message and AI message which is the model's response.
-
-3. What would break in a production AI system if we ignore message history?
-Ignoring message history could lead to confusion, inconsistent responses, and a poor user experience.
-The model may end up hallucinating, giving incorrect or irrelevant responses.
-This is a bad user expereince leading to lack of trust in the model.
-"""
+if __name__ == "__main__":
+	main()
